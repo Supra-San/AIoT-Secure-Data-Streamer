@@ -1,0 +1,8 @@
+# Access Control List (ACL)
+# Define access rules for users and topics
+
+# Rule for user 'user_januari'
+user user_januari
+
+# Read and Write access to specific topic
+topic readwrite sensor/suhu/room1
