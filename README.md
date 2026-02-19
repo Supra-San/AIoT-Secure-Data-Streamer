@@ -11,6 +11,7 @@ The goal of this project is to stream environmental data (Temperature & Humidity
 * Feature Engineering: Automated timestamping and conversion of raw JSON payloads into structured DataFrames.
 
 # Folder Structure
+After following the directions below your folder structure will be as follows:
 
        📁  AIoT-Secure-Data-Streamer
        ├── 📁 certs
