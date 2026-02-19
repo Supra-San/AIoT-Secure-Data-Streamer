@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+secrets.h
 
 # Distribution / packaging
 .Python
@@ -143,6 +144,13 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*.crt
+*.srl
+*.csr
+*.key
+*.cnf
+passwd
+acl
 
 # Spyder project settings
 .spyderproject
