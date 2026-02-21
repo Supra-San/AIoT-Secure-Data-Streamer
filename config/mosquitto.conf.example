@@ -1,12 +1,12 @@
 # Listener for TLS (encrypted)
 listener 8883
-cafile <path>/ca.crt
-certfile <path>/server.crt
-keyfile <path>/server.key
+cafile <path/to/ca.crt>      
+certfile <path/to/server.crt> 
+keyfile <path/to/server.key>  
 
 # Disable anonymous access
 allow_anonymous false
 
-# Password and ACL file locations (relative paths)
-password_file <path>/passwd
-acl_file <path>/acl
+# Password and ACL file locations (absolute or relative paths)
+password_file <path/to/passwd>
+acl_file <path/to/acl>

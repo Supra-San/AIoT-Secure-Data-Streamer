@@ -13,31 +13,32 @@ The goal of this project is to stream environmental data (Temperature & Humidity
 # Folder Structure
 After following the directions below your folder structure will be as follows:
 
-       📁  AIoT-Secure-Data-Streamer
-       ├── 📁 certs
-       │   ├── 📄 ca.crt
-       │   ├── 📄 server.crt
-       │   └── 📄 server.key
-       ├── 📁 config
-       │   ├── ⚙️ mosquitto.conf
-       │   ├── ⚙️ mosquitto.conf.example
-       │   ├── 📄 passwd
-       │   └── 📄 passwd.example
-       ├── 📁 security
-       │   ├── 📄 acl
-       │   └── 📄 acl.example
-       ├── 📁 pki
-       │   ├── 📄 ca.key
-       │   └── 📄 server.csr
-       ├── 📝 README.md
-       ├── 🐍 app_subscriber.py
-       ├── 📄 requirements.txt
-       ├── 📄 esp32_publisher.ino
-       ├── ⚡ secrets.h
-       ├── 📄 secrets.h.example
-       ├── 📄 .env
-       ├── 📄 .env.example
-       └── 📊 sensor_data_room1.csv
+        📁  AIoT-Secure-Data-Streamer
+        ├── 📁 certs
+        │   ├── 📄 ca.crt
+        │   ├── 📄 server.crt
+        │   └── 📄 server.key
+        ├── 📁 config
+        │   ├── ⚙️ mosquitto.conf
+        │   ├── ⚙️ mosquitto.conf.example
+        │   ├── 📄 passwd
+        │   └── 📄 passwd.example
+        ├── 📁 edge
+        │   ├── 📄 esp32_publisher.ino
+        │   ├── ⚡ secrets.h
+        │   └── 📄 secrets.h.example
+        ├── 📁 security
+        │   ├── 📄 acl
+        │   └── 📄 acl.example
+        ├── 📁 pki
+        │   ├── 📄 ca.key
+        │   └── 📄 server.csr
+        ├── 📝 README.md
+        ├── 🐍 app_subscriber.py
+        ├── 📄 requirements.txt
+        ├── 📄 .env
+        ├── 📄 .env.example
+        └── 📊 sensor_data_room1.csv
     
 
 ## 1. Getting Started 🛠️
@@ -68,7 +69,13 @@ pip install -r requirements.txt
 
 ## 2. Credentials Setup (Local Only) 🔒
 <blockquote style="background-color: #ffeef0; padding: 10px;">
-    <strong>⚠️ Warning:</strong> Folders like pki/ and certs/ are excluded from Git for security [Conversation History]. You must create them locally before generating certificates.
+    <strong>⚠️ Warning:</strong> Sensitive files and local configurations are excluded from Git for security. This includes:
+    <ul>
+        <li><code>pki/</code> and <code>certs/</code> folders</li>
+        <li><code>mosquitto.conf</code>, <code>passwd</code>, and <code>acl</code></li>
+        <li><code>.env</code> and <code>sensor_data_room1.csv</code></li>
+    </ul>
+    You must create or configure them locally based on the provided <code>.example</code> files.
 </blockquote>
 
 #### &emsp; 2.1 Create Folder Structure<br/>
@@ -103,14 +110,16 @@ openssl req -new -out pki/server.csr -key certs/server.key
 openssl x509 -req -in pki/server.csr -CA certs/ca.crt -CAkey pki/ca.key -CAcreateser
 ```
 ## 3. Broker Configuration ⚙️
-* Password: Use mosquitto_passwd to create the passwd file inside the config/ folder
-* ACL: Define topic permissions in security/acl following the format in security/acl.example
+* Password: Use `mosquitto_passwd` to create the `passwd` file inside the `config/` folder.
+* ACL: Define topic permissions in `security/acl` following the format in `security/acl.example`.
+* Config: Create `config/mosquitto.conf` based on `config/mosquitto.conf.example`. Ensure you use **absolute paths** for certificate files to avoid path resolution issues with the Mosquitto service.
 
 ## 4. Execution 🚀
 #### &emsp;**4.1 ESP32 Setup**
-* Rename secrets.h.example to secrets.h
-* Update your WiFi/MQTT credentials and paste the content of certs/ca.crt into the SECRET_CA_CERT variable.
-* Flash esp32_publisher.ino to your device. Ensure the Serial Monitor (115200) shows "Time synced!" to allow SSL validation.
+* Navigate to the `edge/` folder.
+* Rename `secrets.h.example` to `secrets.h`.
+* Update your WiFi/MQTT credentials and paste the content of `certs/ca.crt` into the `SECRET_CA_CERT` variable.
+* Flash `esp32_publisher.ino` to your device. Ensure the Serial Monitor (115200) shows "Time synced!" to allow SSL validation.
 
 #### &emsp;**4.2 Running the System**
 &emsp; Open two separate terminals:

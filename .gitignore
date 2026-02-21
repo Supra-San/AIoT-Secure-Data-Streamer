@@ -154,7 +154,6 @@ passwd
 acl
 *.conf
 *.csv
-mosquitto.conf
 
 # Spyder project settings
 .spyderproject
