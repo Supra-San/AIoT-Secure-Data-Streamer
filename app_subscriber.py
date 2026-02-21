@@ -25,7 +25,7 @@ CLIENT_ID = os.getenv("MQTT_CLIENT_ID") or f"subscriber-{random.randint(1000, 99
 
 # Data Storage Configuration
 CSV_FILENAME = "sensor_data_room1.csv"
-BUFFER_THRESHOLD = 5  # Setting number of data before convert to dataframe
+BUFFER_THRESHOLD = 5  # Number of readings before converting to dataframe
 
 # Check if all required environment variables are set
 if not all([BROKER, PORT, TOPIC, CA_CERT_PATH]):
@@ -44,28 +44,57 @@ data_buffer = []
 
 def on_message(client, userdata, msg):
     try:
-        # Decode JSON payload
-        payload = json.loads(msg.payload.decode())
+        # 1. Decode payload
+        raw_data = msg.payload.decode()
+        payload = json.loads(raw_data)
+        
+        # 2. Schema Validation
+        required_keys = ['temperature', 'humidity']
+        if not all(key in payload for key in required_keys):
+            print(f"⚠️ Validation Failed: Missing keys in payload: {payload}")
+            return
+
+        # 3. Data Integrity & Type Validation
+        # Ensure values are numeric and not empty/None
+        try:
+            temp = float(payload['temperature'])
+            humi = float(payload['humidity'])
+        except (ValueError, TypeError):
+            print(f"⚠️ Validation Failed: Non-numeric data received: {payload}")
+            return
+
+        # 4. Out-of-range Physical Check
+        # Example: DHT22 sensor doesn't read temperature > 80°C or < -40°C
+        if not (-40 <= temp <= 80) or not (0 <= humi <= 100):
+            print(f"⚠️ Validation Failed: Sensor values out of physical range: {payload}")
+            return
+
+        # 5. Add timestamp if valid
         payload['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # 6. Save to buffer
         data_buffer.append(payload)
-        logging.info(f"📥 Data Received. Buffer Size: {len(data_buffer)}")
+        print(f"✅ Data Validated & Received: {payload} | Total: {len(data_buffer)}")
 
-        # Convert to Dataframe & Save periodically
-        if len(data_buffer) % BUFFER_THRESHOLD == 0:
+        # Data ingestion into Pandas every 5 data points
+        if len(data_buffer) % 5 == 0:
             df = pd.DataFrame(data_buffer)
-            print("\n" + "="*30)
-            print(" [ LIVE PANDAS DATAFRAME ] ")
-            print(df.tail(BUFFER_THRESHOLD))
-            print(f"Average Temperature: {df['temperature'].mean():.2f}°C")
-            print("="*30 + "\n")
+            # Interpolate missing data for numeric columns
+            numeric_cols = ['temperature', 'humidity']
+            df[numeric_cols] = df[numeric_cols].interpolate(method='linear').ffill().bfill()
+            df.to_csv("sensor_data_room1.csv", index=False)
             
-            # Save to CSV (Atomic Action)
-            df.to_csv(CSV_FILENAME, index=False)
-            
-    except Exception as e:
-        logging.error(f"Error processing message: {e}")
+            # Print average temperature and humidity
+            print(f"Average Temperature\t: {round(df['temperature'].mean(), 2)}°C")
+            print(f"Average Humidity\t: {round(df['humidity'].mean(), 2)}%")
+            print("--- [ LIVE PANDAS DATAFRAME UPDATED ] ---\n")
 
+    except json.JSONDecodeError:
+        print(f"❌ Error: Failed to decode JSON payload: {msg.payload}")
+    except Exception as e:
+        print(f"❌ Unexpected Error: {e}")
+
+        
 # ==========================================
 # 3. MQTT CLIENT SETUP & EXECUTION
 # ==========================================

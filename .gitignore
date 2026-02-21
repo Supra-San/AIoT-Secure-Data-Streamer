@@ -151,6 +151,8 @@ venv.bak/
 *.cnf
 passwd
 acl
+*.conf
+*.csv
 
 # Spyder project settings
 .spyderproject

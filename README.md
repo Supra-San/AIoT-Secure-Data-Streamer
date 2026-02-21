@@ -7,8 +7,8 @@ The goal of this project is to stream environmental data (Temperature & Humidity
 * Edge: ESP32 + DHT22 Sensor.
 * Security: Encrypted transmission via MQTTS (Port 8883) with CA Certificate validation.
 * Broker: Eclipse Mosquitto with TLS configuration, password authentication, and ACL.
-* Data Processor: Python Subscriber (app_subscriber.py) using Paho-MQTT & Pandas.
-* Feature Engineering: Automated timestamping and conversion of raw JSON payloads into structured DataFrames.
+* Data Processor: Python Subscriber (`app_subscriber.py`) using Paho-MQTT & Pandas.
+* Feature Engineering: Automated timestamping, data validation (range & schema), real-time linear interpolation for missing data, and live averaging.
 
 # Folder Structure
 After following the directions below your folder structure will be as follows:
@@ -16,13 +16,11 @@ After following the directions below your folder structure will be as follows:
        📁  AIoT-Secure-Data-Streamer
        ├── 📁 certs
        │   ├── 📄 ca.crt
-       │   ├── 📄 ca.srl
        │   ├── 📄 server.crt
-       │   ├── 📄 server.csr
-       │   ├── 📄 server.key
-       │   └── 📄 server_cert.cnf
+       │   └── 📄 server.key
        ├── 📁 config
        │   ├── ⚙️ mosquitto.conf
+       │   ├── ⚙️ mosquitto.conf.example
        │   ├── 📄 passwd
        │   └── 📄 passwd.example
        ├── 📁 security
@@ -30,14 +28,16 @@ After following the directions below your folder structure will be as follows:
        │   └── 📄 acl.example
        ├── 📁 pki
        │   ├── 📄 ca.key
-       │   ├── 📄 ca.srl
        │   └── 📄 server.csr
        ├── 📝 README.md
        ├── 🐍 app_subscriber.py
        ├── 📄 requirements.txt
        ├── 📄 esp32_publisher.ino
        ├── ⚡ secrets.h
-       └── 📄 secrets.h.example
+       ├── 📄 secrets.h.example
+       ├── 📄 .env
+       ├── 📄 .env.example
+       └── 📊 sensor_data_room1.csv
     
 
 ## 1. Getting Started 🛠️
@@ -122,9 +122,22 @@ openssl x509 -req -in pki/server.csr -CA certs/ca.crt -CAkey pki/ca.key -CAcreat
 
 
 * Terminal 3 (Subscriber):
+  ```bash
+  python3 app_subscriber.py
+  ```
 
 ## 📊 Data Output Example
-The processed data is automatically saved to sensor_data_room1.csv. The format includes the raw sensor readings and a local machine timestamp: 
+### 🖥️ Console Output
+When the data buffer reaches the threshold (default: 5), the subscriber calculates and displays averages:
+```text
+✅ Data Validated & Received: {'temperature': 29.6, 'humidity': 90.7, 'timestamp': '2026-02-21 09:53:34'} | Total: 5
+Average Temperature     : 29.6°C
+Average Humidity        : 90.74%
+--- [ LIVE PANDAS DATAFRAME UPDATED ] ---
+```
+
+### 📄 CSV structure
+The processed data is automatically saved to `sensor_data_room1.csv`.
 | Temperature | Humidity | Timestamp |
 | :--- | :--- | :--- |
 | 29.9 | 90.8 | 2026-02-16 22:12:06 |
