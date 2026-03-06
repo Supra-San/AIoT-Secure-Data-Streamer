@@ -8,6 +8,7 @@ import sys
 from dotenv import load_dotenv
 from datetime import datetime
 
+
 # ==========================================
 # 1. CONFIGURATION (HEADER SECTION)
 # ==========================================
@@ -18,6 +19,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 BROKER = os.getenv("MQTT_BROKER")
 PORT = os.getenv("MQTT_PORT") # get port number from .env
 TOPIC = os.getenv("MQTT_TOPIC")
+STATUS_TOPIC = os.getenv("MQTT_STATUS_TOPIC")
 MQTT_USER = os.getenv("MQTT_USER")
 MQTT_PASS = os.getenv("MQTT_PASS")
 CA_CERT_PATH = os.getenv("CA_CERT_PATH")
@@ -28,7 +30,7 @@ CSV_FILENAME = "sensor_data_room1.csv"
 BUFFER_THRESHOLD = 5  # Number of readings before converting to dataframe
 
 # Check if all required environment variables are set
-if not all([BROKER, PORT, TOPIC, CA_CERT_PATH]):
+if not all([BROKER, PORT, TOPIC, STATUS_TOPIC, CA_CERT_PATH]):
     print("❌ Error: Missing required environment variables in .env file.")
     sys.exit(1)
 
@@ -44,7 +46,16 @@ data_buffer = []
 
 def on_message(client, userdata, msg):
     try:
-        # 1. Decode payload
+        # 1. Handle Status Messages (LWT / Online Status)
+        if msg.topic == STATUS_TOPIC:
+            status = msg.payload.decode().upper()
+            if status == "OFFLINE":
+                print(f"\n🔴 [ DEVICE STATUS ]: {status} - ESP32 disconnected unexpectedly!")
+            else:
+                print(f"\n🟢 [ DEVICE STATUS ]: {status} - ESP32 is online.")
+            return
+
+        # 2. Decode Data payload
         raw_data = msg.payload.decode()
         payload = json.loads(raw_data)
         
@@ -89,6 +100,10 @@ def on_message(client, userdata, msg):
             print(f"Average Humidity\t: {round(df['humidity'].mean(), 2)}%")
             print("--- [ LIVE PANDAS DATAFRAME UPDATED ] ---\n")
 
+            # Live visualization is handled by dashboard.py (dcc.Interval)
+            # which reads this CSV file and refreshes the chart every 2 seconds.
+            print("📊 CSV updated — open dashboard.py for live charts.")
+
     except json.JSONDecodeError:
         print(f"❌ Error: Failed to decode JSON payload: {msg.payload}")
     except Exception as e:
@@ -113,8 +128,8 @@ client.on_message = on_message
 try:
     logging.info(f"Connecting to {BROKER} on Port {PORT}...")
     client.connect(BROKER, PORT)
-    client.subscribe(TOPIC)
-    logging.info(f"Subscriber Active. Subscribed to topic: {TOPIC}")
+    client.subscribe([(TOPIC, 1), (STATUS_TOPIC, 1)])
+    logging.info(f"Subscriber Active. Subscribed to topics: {TOPIC}, {STATUS_TOPIC}")
     client.loop_forever()
 except KeyboardInterrupt:
     logging.info("Disconnected by user. Saving final data...")

@@ -11,7 +11,7 @@ The goal of this project is to stream environmental data (Temperature & Humidity
 * Feature Engineering: Automated timestamping, data validation (range & schema), real-time linear interpolation for missing data, and live averaging.
 
 # Folder Structure
-After following the directions below your folder structure will be as follows:
+After running `setup.sh`, your folder structure will be as follows:
 
         📁  AIoT-Secure-Data-Streamer
         ├── 📁 certs
@@ -35,6 +35,8 @@ After following the directions below your folder structure will be as follows:
         │   └── 📄 server.csr
         ├── 📝 README.md
         ├── 🐍 app_subscriber.py
+        ├── 🐍 dashboard.py
+        ├── 🔧 setup.sh
         ├── 📄 requirements.txt
         ├── 📄 .env
         ├── 📄 .env.example
@@ -45,13 +47,13 @@ After following the directions below your folder structure will be as follows:
 #### &emsp; 1.1 Prerequisites<br/>
    &emsp; Ensure you have the following installed:<br/>
    * OpenSSL: Required for generating security certificates.<br/>
+   * Mosquitto Tools: `mosquitto` + `mosquitto_passwd` for broker and credential management.<br/>
    * Python 3.x: For the subscriber and data processing<br/>
    * Arduino IDE: For flashing the ESP32<br/>
    
 #### &emsp; 1.2 Environment Setup<br/>
 &emsp; Create a virtual environment
 ```bash
-
 python -m venv venv
 ```
 &emsp; Activate the environment
@@ -75,64 +77,66 @@ pip install -r requirements.txt
         <li><code>mosquitto.conf</code>, <code>passwd</code>, and <code>acl</code></li>
         <li><code>.env</code> and <code>sensor_data_room1.csv</code></li>
     </ul>
-    You must create or configure them locally based on the provided <code>.example</code> files.
+    You must create or configure them locally by running <code>setup.sh</code>.
 </blockquote>
 
-#### &emsp; 2.1 Create Folder Structure<br/>
-  ```bash
-mkdir pki certs
-```
-#### &emsp; 2.2 Generate Certificates (OpenSSL)<br/>
-&emsp; Follow these commands to build your Public Key Infrastructure (PKI):
-* Generate Certificate Authority (CA)
+### ⚡ Automated Setup
+
+Run the provided setup script — it handles **everything** in one go:
+
 ```bash
-openssl genrsa -out pki/ca.key 2048
+chmod +x setup.sh
+./setup.sh
 ```
-#### &emsp; 2.3 Generate CA Certificate<br/>
-```bash
-openssl req -new -x509 -days 365 -key pki/ca.key -out certs/ca.crt
-```
+
+The script will interactively ask for:
+
+| Prompt | Description |
+| :--- | :--- |
+| Broker IP Address | Your machine's local IP (e.g. `192.168.1.100`) — used as CN in certificates |
+| Certificate validity | Days until cert expiry (default: 365) |
+| MQTT Username | Username for ESP32 & subscriber authentication |
+| MQTT Password | Secure password (input hidden, with confirmation) |
+| Data Topic | e.g. `sensor/suhu/room1` |
+| Status/LWT Topic | e.g. `sensor/suhu/room1/status` |
+
+It then automatically generates:
+- `pki/ca.key` + `certs/ca.crt` — Certificate Authority
+- `certs/server.key` + `certs/server.crt` — Signed server certificate
+- `config/passwd` — Hashed Mosquitto password file
+- `security/acl` — Access control rules
+- `config/mosquitto.conf` — Ready-to-use broker config (absolute paths)
+- `.env` — Python subscriber credentials
+
 <blockquote style="background-color: #ffeef0; padding: 10px;">
-    <strong>⚠️ Note:</strong> When prompted for the Common Name (FQDN), enter your Broker's IP Address (e.g., 192.168.18.8).
+    <strong>⚠️ Note:</strong> If <code>pki/ca.key</code> and <code>certs/ca.crt</code> already exist, the script skips PKI generation automatically to avoid overwriting existing certificates.
 </blockquote>
 
-#### &emsp; 2.4 Generate Server (Broker) Certificate<br/>
-```bash
-openssl genrsa -out certs/server.key 2048
-``` 
-#### &emsp; 2.5 Generate Certificate Signing Request (CSR)<br/>
-```bash
-openssl req -new -out pki/server.csr -key certs/server.key
-```
-&emsp; Leave the challenge password empty.
-#### &emsp; 2.6 Sign the Server Certificate using the CA<br/>
-```bash
-openssl x509 -req -in pki/server.csr -CA certs/ca.crt -CAkey pki/ca.key -CAcreateser
-```
-## 3. Broker Configuration ⚙️
-* Password: Use `mosquitto_passwd` to create the `passwd` file inside the `config/` folder.
-* ACL: Define topic permissions in `security/acl` following the format in `security/acl.example`.
-* Config: Create `config/mosquitto.conf` based on `config/mosquitto.conf.example`. Ensure you use **absolute paths** for certificate files to avoid path resolution issues with the Mosquitto service.
+---
 
-## 4. Execution 🚀
-#### &emsp;**4.1 ESP32 Setup**
+## 3. Execution 🚀
+#### &emsp;**3.1 ESP32 Setup**
 * Navigate to the `edge/` folder.
 * Rename `secrets.h.example` to `secrets.h`.
 * Update your WiFi/MQTT credentials and paste the content of `certs/ca.crt` into the `SECRET_CA_CERT` variable.
 * Flash `esp32_publisher.ino` to your device. Ensure the Serial Monitor (115200) shows "Time synced!" to allow SSL validation.
 
-#### &emsp;**4.2 Running the System**
-&emsp; Open two separate terminals:
+#### &emsp;**3.2 Running the System**
+&emsp; Open separate terminals:
 * Terminal 1 (Broker):
   ![WhatsApp Image 2026-02-19 at 12 40 06](https://github.com/user-attachments/assets/0f8b3459-b93a-4af6-9752-c05a0344690c)
 
 * Terminal 2 (Publisher) Arduino-IDE:
    ![WhatsApp Image 2026-02-19 at 12 41 26](https://github.com/user-attachments/assets/01a7ed16-5910-490c-a999-ba2876780b20)
 
-
 * Terminal 3 (Subscriber):
   ```bash
   python3 app_subscriber.py
+  ```
+
+* Terminal 4 (Dashboard — optional):
+  ```bash
+  python3 dashboard.py
   ```
 
 ## 📊 Data Output Example
@@ -169,6 +173,3 @@ Suprapto Santoso<br/>
 AI & IoT Developer<br/>
 🚀 Focused on Generative AI, Embedded Systems, and Smart Automation<br/>
 supraptosantoso.san@gmail.com
-
-
-
